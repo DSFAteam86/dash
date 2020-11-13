@@ -75,10 +75,8 @@ def connect(params_dic):
 conn = connect(param_dic)
 
 df_master = pd.read_sql('select * from public.tmp_depto', conn)
-df_master = df_master[df_master['anno_cargue_secop'] == '2020'][['departamento_entidad', 'cuantia_contrato']].groupby('departamento_entidad').sum('cuantia_contrato').reset_index()
-df_master['NOMBRE_DPT'] = df_master['departamento_entidad'].str.upper().apply(lambda x: uni.unidecode(x))
+df_master['label'] = df_master['departamento_entidad'].str.upper().apply(lambda x: uni.unidecode(x))
 df_master['cuantia_contrato'] = round(df_master['cuantia_contrato']/1000, 2)
-df_master = df_master[['NOMBRE_DPT', 'cuantia_contrato']].copy()
 
 
 max_value = df_master['cuantia_contrato'].max()
@@ -88,16 +86,7 @@ def filtrar_cluster(df,cluster_dropdown):
     Función para filtrar los cluster en la tabla maestra (1122 municipios).
     Recibe un Dataframe y devuelve otro Dataframe filtrado.
     '''
-    filtered_df = df[df['labels'].isin(cluster_dropdown)]
-    return filtered_df
-
-# Funcion de filtrado por cluster
-def filtrar_cluster_tabla_positivos(df,cluster_dropdown):
-    '''
-    Función para filtrar los cluster en la tabla maestra (1122 municipios).
-    Recibe un Dataframe y devuelve otro Dataframe filtrado.
-    '''
-    filtered_df = df[df['cluster_a'].isin(cluster_dropdown)]
+    filtered_df = df[df['label'].isin(cluster_dropdown)]
     return filtered_df
 
 # Create controls
@@ -135,7 +124,22 @@ cluster_options = [{'label':'AMAZONAS','value':'AMAZONAS'},
                    {'label':'VALLE DEL CAUCA','value':'VALLE DEL CAUCA'},
                    {'label':'VAUPES','value':'VAUPES'},
                    {'label':'VICHADA','value':'VICHADA'}]
-                   
+
+year_options = [{'label':'2020-01-01','value':'2020-01-01'},
+                {'label':'2019-01-01','value':'2019-01-01'},
+                {'label':'2018-01-01','value':'2018-01-01'},
+                {'label':'2017-01-01','value':'2017-01-01'},
+                {'label':'2016-01-01','value':'2016-01-01'},
+                {'label':'2015-01-01','value':'2015-01-01'},
+                {'label':'2014-01-01','value':'2014-01-01'},
+                {'label':'2013-01-01','value':'2013-01-01'},
+                {'label':'2012-01-01','value':'2012-01-01'},
+                {'label':'2011-01-01','value':'2011-01-01'},
+                {'label':'2010-01-01','value':'2010-01-01'},
+                {'label':'2009-01-01','value':'2009-01-01'},
+                {'label':'2008-01-01','value':'2008-01-01'}]
+
+
 age_options = [{'label': '0 - 5', 'value': '1'},
  {'label': '5 - 10', 'value': '2'},
  {'label': '10 - 15', 'value': '3'},
@@ -264,7 +268,7 @@ app.layout = html.Div(
                             id='group_button_selector',
                             options=[
                                 {'label': 'Clustered ', 'value': 'clustered'},
-                                {'label': 'Municipality ', 'value': 'municipality'}
+                                {'label': 'Department ', 'value': 'Department'}
                             ],
                             value='clustered',
                             labelStyle={'display': 'inline-block'},
@@ -276,24 +280,6 @@ app.layout = html.Div(
                         ),
                         dcc.Dropdown(
                             id='analysis_dropdown_options',
-                            options=analysis_options,
-                            multi=False,
-                            value=[],
-                            className="dcc_control"
-                        ),
-                        html.P(
-                            'Select Scatter Plot options:',
-                            className="control_label"
-                        ),
-                        dcc.Dropdown(
-                            id='scatter1_dropdown_options',
-                            options=analysis_options,
-                            multi=False,
-                            value=[],
-                            className="dcc_control"
-                        ),
-                        dcc.Dropdown(
-                            id='scatter2_dropdown_options',
                             options=analysis_options,
                             multi=False,
                             value=[],
@@ -332,17 +318,6 @@ app.layout = html.Div(
                             id='barras_dropdown_options',
                             options=lista_barras_drop_prueba,
                             multi=False,
-                            value=[],
-                            className="dcc_control"
-                        ),
-                        html.P(
-                            'Select Age range:',
-                            className="control_label"
-                        ),
-                        dcc.Dropdown(
-                            id='age_dropdown_options',
-                            options=age_options,
-                            multi=True,
                             value=[],
                             className="dcc_control"
                         ),
@@ -416,14 +391,14 @@ app.layout = html.Div(
                             figure={ 
                                 'data': [go.Choroplethmapbox(
                                     geojson=geojson_municipios,
-                                    locations=df_master['NOMBRE_DPT'], # Esto debería coincidir con el "id" en el geojson
+                                    locations=df_master['label'], # Esto debería coincidir con el "id" en el geojson
                                     z=df_master['cuantia_contrato'], # Métrica (lo que se va a medir)
                                     colorscale="Viridis", zmin=0, zmax=max_value, #Colores del degradé del mapa: Cividis, Viridis, Magma 
-                                    text=df_master['NOMBRE_DPT'],
+                                    text=df_master['label'],
                                     featureidkey="properties.NOMBRE_DPT",
                                     colorbar=
                                     {
-                                      'title':'Clúster', #Título de la barra de colores
+                                      'title':'Expenditure', #Título de la barra de colores
                                       'thickness':10,
                                       'xpad': 5,
                                       'tickvals' : [0,1,2,3,4]
@@ -437,7 +412,7 @@ app.layout = html.Div(
                                       'color':'#999' # Color de la línea
                                       }
                                     },
-                                    hovertemplate = '<b>%{text}</b> <br>Clúster: %{z:,.d}<extra></extra>' # Override de hoverinfo
+                                    hovertemplate = '<b>%{text}</b> <br>Expenditure: %{z:,.d}<extra></extra>' # Override de hoverinfo
                                 )],
                                 'layout': go.Layout(
                                         mapbox_style="light", #streets, dark, light, outdoors, satellite, satellite-streets, carto-positron
@@ -592,18 +567,18 @@ def update_text_boxes(map_data,cluster_dropdown,analysis_dropdown_options,group_
 )
 def update_map(cluster_dropdown):
     filtered_df = filtrar_cluster(df_master,cluster_dropdown)
-    text = filtered_df['municipio'] + ',' + filtered_df['departamento'] + '.' + filtered_df['poblacion'].apply(lambda x : 'Población: ' + str(f'{x:,}'))
+    text = filtered_df['label'] + ',' + filtered_df['cuantia_contrato'].apply(lambda x : 'Expenditure: ' + str(f'{x:,}'))
     return [{ 
             'data': [go.Choroplethmapbox(
                                     geojson=geojson_municipios,
-                                    locations=df_master['NOMBRE_DPT'], # Esto debería coincidir con el "id" en el geojson
+                                    locations=filtered_df['label'], # Esto debería coincidir con el "id" en el geojson
                                     z=df_master['cuantia_contrato'], # Métrica (lo que se va a medir)
                                     colorscale="Viridis", zmin=0, zmax=max_value, #Colores del degradé del mapa: Cividis, Viridis, Magma 
-                                    text=df_master['NOMBRE_DPT'],
+                                    text=filtered_df['label'],
                                     featureidkey="properties.NOMBRE_DPT",
                                     colorbar=
                                     {
-                                      'title':'Clúster', #Título de la barra de colores
+                                      'title':'Expenditure', #Título de la barra de colores
                                       'thickness':10,
                                       'xpad': 5,
                                       'tickvals' : [0,1,2,3,4]
@@ -617,7 +592,7 @@ def update_map(cluster_dropdown):
                                       'color':'#999' # Color de la línea
                                       }
                                     },
-                                    hovertemplate = '<b>%{text}</b> <br>Clúster: %{z:,.d}<extra></extra>' # Override de hoverinfo
+                                    hovertemplate = '<b>%{text}</b> <br>Expenditure: %{z:,.d}<extra></extra>' # Override de hoverinfo
                                 )],
                                 'layout': go.Layout(
                                         mapbox_style="light", #streets, dark, light, outdoors, satellite, satellite-streets, carto-positron
